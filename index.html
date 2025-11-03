@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Sample Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .menu-item {
+            background: #34495e;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-item:hover {
+            background: #3498db;
+            transform: translateX(5px);
+        }
+
+        .menu-item.active {
+            background: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+        }
+
+        .filter-section {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #34495e;
+            border-radius: 5px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .filter-section.active {
+            display: block;
+        }
+
+        .filter-section label {
+            display: block;
+            margin-bottom: 5px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #ecf0f1;
+            font-weight: 500;
+        }
+
+        .filter-section select, .filter-section button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-section select {
+            background: white;
+            cursor: pointer;
+        }
+
+        .filter-section button {
+            background: #27ae60;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .filter-section button:hover {
+            background: #229954;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 24px;
+        }
+
+        .header-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            padding: 0 20px;
+            border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+            gap: 5px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #2c3e50;
+            background: #f8f9fa;
+        }
+
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            font-weight: 600;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .result-header h3 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .result-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }
+
+        th:hover {
+            background: #2980b9;
+        }
+
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+        }
+
+        th.sorted-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        th.sorted-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+
+        .tat-overdue {
+            background: #ffe6e6 !important;
+        }
+
+        .tat-pending {
+            background: #fff9e6 !important;
+        }
+
+        .tat-completed {
+            background: #e6ffe6 !important;
+        }
+
+        .month-year-picker {
+            display: none;
+        }
+
+        .month-year-picker.active {
+            display: block;
+        }
+
+        .available-data-info {
+            background: #34495e;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-size: 12px;
+        }
+
+        .available-data-info h4 {
+            margin-bottom: 8px;
+            color: #3498db;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 5px;
+            font-size: 11px;
+        }
+
+        .info-label {
+            color: #95a5a6;
+        }
+
+        .info-value {
+            color: #ecf0f1;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        .filter-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .filter-tag {
+            background: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .filter-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>📊 Lab Sample Tracker</h2>
+        
+        <div class="menu-item" onclick="showAllSheets()">
+            <span>🏠</span> View All Sheets
+        </div>
+
+        <div class="menu-item" onclick="toggleFilter('client')">
+            <span>👥</span> Client Wise Segregation
+        </div>
+        <div id="clientFilter" class="filter-section">
+            <label>Select Client:</label>
+            <select id="clientSelect">
+                <option value="">Loading...</option>
+            </select>
+
+            <label>View By:</label>
+            <select id="clientViewType" onchange="toggleDatePickers()">
+                <option value="total">Total (All Time)</option>
+                <option value="month">Month wise</option>
+                <option value="year">Year wise</option>
+            </select>
+
+            <div id="monthPicker" class="month-year-picker">
+                <label>Select Month:</label>
+                <select id="monthSelect"></select>
+                <label>Select Year:</label>
+                <select id="monthYearSelect"></select>
+            </div>
+
+            <div id="yearPicker" class="month-year-picker">
+                <label>Select Year:</label>
+                <select id="yearSelect"></select>
+            </div>
+
+            <button onclick="applyClientFilter()">📈 Apply Filter</button>
+        </div>
+
+        <div class="menu-item" onclick="toggleFilter('tat')">
+            <span>⏰</span> TAT Wise Segregation
+        </div>
+        <div id="tatFilter" class="filter-section">
+            <label>TAT Status:</label>
+            <select id="tatStatus">
+                <option value="not_crossed">⏳ TAT Not Yet Crossed (Pending)</option>
+                <option value="crossed">🚨 TAT Crossed (Report Not Released)</option>
+                <option value="completed">✅ Reports Released</option>
+            </select>
+            <button onclick="applyTATFilter()">⏰ Apply Filter</button>
+        </div>
+
+        <div id="dataInfo" class="available-data-info" style="display: none;">
+            <h4>📅 Available Data</h4>
+            <div class="info-grid">
+                <span class="info-label">Sheets:</span>
+                <span class="info-value" id="infoSheets">-</span>
+                <span class="info-label">Clients:</span>
+                <span class="info-value" id="infoClients">-</span>
+                <span class="info-label">Total Samples:</span>
+                <span class="info-value" id="infoSamples">-</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Lab Sample Management System</h1>
+            <div class="header-controls">
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search in current view..." onkeyup="searchTable()">
+                <button class="refresh-btn" onclick="loadAllData()">🔄 Refresh Data</button>
+            </div>
+        </div>
+
+        <div class="tabs" id="sheetTabs"></div>
+
+        <div class="content-area" id="contentArea">
+            <div class="loading">Initializing system</div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE THIS WITH YOUR DEPLOYED APPS SCRIPT WEB APP URL
+        const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+        
+        let allData = {};
+        let metadata = {};
+        let currentView = [];
+        let currentSheet = '';
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        // Initialize
+        if (APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+            loadAllData();
+        } else {
+            document.getElementById('contentArea').innerHTML = `
+                <div class="error">
+                    <h3>⚠️ Configuration Required</h3>
+                    <p>Please update the <code>APPS_SCRIPT_URL</code> in the code with your deployed Apps Script URL.</p>
+                    <p>Follow the setup instructions to deploy the Apps Script first.</p>
+                </div>
+            `;
+        }
+
+        async function loadAllData() {
+            try {
+                document.getElementById('contentArea').innerHTML = '<div class="loading">Loading data from Google Sheets</div>';
+                
+                const url = `${APPS_SCRIPT_URL}?action=getAllData`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                allData = data.sheets;
+                metadata = data.metadata;
+                
+                populateClientDropdown();
+                populateMonthYearDropdowns();
+                renderSheetTabs();
+                updateDataInfo();
+                showAllSheets();
+                
+            } catch (error) {
+                document.getElementById('contentArea').innerHTML = `
+                    <div class="error">
+                        <h3>Error Loading Data</h3>
+                        <p>${error.message}</p>
+                        <p>Please ensure the Apps Script is deployed correctly and the URL is updated.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function populateClientDropdown() {
+            const select = document.getElementById('clientSelect');
+            select.innerHTML = '<option value="">-- Select Client --</option>';
+            
+            metadata.clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client;
+                option.textContent = client;
+                select.appendChild(option);
+            });
+        }
+
+        function populateMonthYearDropdowns() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            // Month dropdown
+            const monthSelect = document.getElementById('monthSelect');
+            monthSelect.innerHTML = '';
+            metadata.months.forEach(monthNum => {
+                const option = document.createElement('option');
+                option.value = monthNum;
+                option.textContent = monthNames[monthNum - 1];
+                monthSelect.appendChild(option);
+            });
+            
+            // Year dropdowns
+            ['monthYearSelect', 'yearSelect'].forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '';
+                metadata.years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function updateDataInfo() {
+            document.getElementById('dataInfo').style.display = 'block';
+            document.getElementById('infoSheets').textContent = Object.keys(allData).length;
+            document.getElementById('infoClients').textContent = metadata.clients.length;
+            
+            let totalSamples = 0;
+            Object.values(allData).forEach(sheet => {
+                totalSamples += sheet.rows.length;
+            });
+            document.getElementById('infoSamples').textContent = totalSamples;
+        }
+
+        function renderSheetTabs() {
+            const tabsContainer = document.getElementById('sheetTabs');
+            tabsContainer.innerHTML = '';
+            
+            Object.keys(allData).forEach(sheetName => {
+                const tab = document.createElement('button');
+                tab.className = 'tab';
+                tab.textContent = sheetName;
+                tab.onclick = () => displaySheet(sheetName);
+                tabsContainer.appendChild(tab);
+            });
+        }
+
+        function showAllSheets() {
+            document.querySelectorAll('.filter-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            if (Object.keys(allData).length > 0) {
+                const firstSheet = Object.keys(allData)[0];
+                displaySheet(firstSheet);
+            }
+        }
+
+        function displaySheet(sheetName) {
+            currentSheet = sheetName;
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.textContent === sheetName);
+            });
+            
+            const sheetData = allData[sheetName];
+            if (!sheetData || sheetData.rows.length === 0) {
+                document.getElementById('contentArea').innerHTML = '<div class="no-data">No data available in this sheet</div>';
+                return;
+            }
+            
+            currentView = sheetData.rows;
+            renderTable(sheetData.rows, `${sheetName} - All Samples`, sheetData.headers);
+        }
+
+        function renderTable(rows, title = '', headers = null) {
+            if (rows.length === 0) {
+                document.getElementById('contentArea').innerHTML = '<div class="no-data">No samples match your criteria</div>';
+                return;
+            }
+            
+            // Use first sheet's headers if not provided
+            if (!headers) {
+                headers = allData[Object.keys(allData)[0]].headers;
+            }
+            
+            const rowKeys = Object.keys(rows[0]);
+            
+            let html = `
+                <div class="result-header">
+                    <h3>${title}</h3>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Samples</div>
+                            <div class="stat-value">${rows.length}</div>
+                        </div>
+                        ${getTATStats(rows)}
+                    </div>
+                </div>
+            `;
+            
+            html += '<div class="table-container"><table><thead><tr>';
+            
+            headers.forEach((header, index) => {
+                html += `<th class="sortable" onclick="sortTable(${index})">${header}</th>`;
+            });
+            
+            html += '</tr></thead><tbody id="tableBody">';
+            
+            rows.forEach(row => {
+                const rowClass = getTATClass(row);
+                html += `<tr class="${rowClass}">`;
+                
+                rowKeys.forEach(key => {
+                    html += `<td>${row[key] || ''}</td>`;
+                });
+                
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            
+            document.getElementById('contentArea').innerHTML = html;
+        }
+
+        function getTATStats(rows) {
+            let pending = 0, overdue = 0, completed = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            rows.forEach(row => {
+                const tatDate = parseDate(row.tatReport);
+                const releasedDate = row.reportReleasedDate;
+                
+                if (releasedDate && releasedDate.trim()) {
+                    completed++;
+                } else if (tatDate) {
+                    if (tatDate < today) {
+                        overdue++;
+                    } else {
+                        pending++;
+                    }
+                }
+            });
+            
+            return `
+                <div class="stat-item">
+                    <div class="stat-label">⏳ Pending</div>
+                    <div class="stat-value">${pending}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🚨 Overdue</div>
+                    <div class="stat-value">${overdue}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">✅ Completed</div>
+                    <div class="stat-value">${completed}</div>
+                </div>
+            `;
+        }
+
+        function getTATClass(row) {
+            const tatDate = parseDate(row.tatReport);
+            const releasedDate = row.reportReleasedDate;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (releasedDate && releasedDate.trim()) {
+                return 'tat-completed';
+            }
+            
+            if (tatDate) {
+                if (tatDate < today) {
+                    return 'tat-overdue';
+                } else {
+                    return 'tat-pending';
+                }
+            }
+            
+            return '';
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr || dateStr === '') return null;
+            
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return null;
+            
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1;
+            const year = parseInt(parts[2]);
+            
+            const date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+            
+            return null;
+        }
+
+        function sortTable(columnIndex) {
+            const headers = allData[Object.keys(allData)[0]].headers;
+            const columnName = headers[columnIndex];
+            const rowKeys = Object.keys(currentView[0]);
+            const sortKey = rowKeys[columnIndex];
+            
+            if (sortColumn === columnIndex) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnIndex;
+                sortDirection = 'asc';
+            }
+            
+            currentView.sort((a, b) => {
+                let valA = a[sortKey];
+                let valB = b[sortKey];
+                
+                // Handle dates
+                const dateA = parseDate(valA);
+                const dateB = parseDate(valB);
+                if (dateA && dateB) {
+                    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+                
+                // Handle numbers
+                const numA = parseFloat(valA);
+                const numB = parseFloat(valB);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return sortDirection === 'asc' ? numA - numB : numB - numA;
+                }
+                
+                // Handle strings
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                
+                if (sortDirection === 'asc') {
+                    return valA < valB ? -1 : valA > valB ? 1 : 0;
+                } else {
+                    return valA > valB ? -1 : valA < valB ? 1 : 0;
+                }
+            });
+            
+            renderTable(currentView, document.querySelector('.result-header h3').textContent, headers);
+            
+            // Update sort indicators
+            document.querySelectorAll('th').forEach((th, idx) => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (idx === columnIndex) {
+                    th.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+        }
+
+        function searchTable() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            if (!searchTerm) {
+                renderTable(currentView, document.querySelector('.result-header h3').textContent);
+                return;
+            }
+            
+            const filtered = currentView.filter(row => {
+                return Object.values(row).some(val => 
+                    String(val).toLowerCase().includes(searchTerm)
+                );
+            });
+            
+            renderTable(filtered, document.querySelector('.result-header h3').textContent + ` (Filtered)`);
+        }
+
+        function toggleFilter(type) {
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.menu-item').classList.add('active');
+            
+            document.querySelectorAll('.filter-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(type + 'Filter').classList.add('active');
+        }
+
+        function toggleDatePickers() {
+            const viewType = document.getElementById('clientViewType').value;
+            document.getElementById('monthPicker').classList.toggle('active', viewType === 'month');
+            document.getElementById('yearPicker').classList.toggle('active', viewType === 'year');
+        }
+
+        function applyClientFilter() {
+            const client = document.getElementById('clientSelect').value;
+            const viewType = document.getElementById('clientViewType').value;
+            
+            if (!client) {
+                alert('Please select a client');
+                return;
+            }
+            
+            let filteredData = [];
+            let title = `Client: ${client}`;
+            
+            Object.values(allData).forEach(sheetData => {
+                sheetData.rows.forEach(row => {
+                    if (row.clientName === client) {
+                        if (viewType === 'total') {
+                            filteredData.push(row);
+                        } else if (viewType === 'month') {
+                            const month = parseInt(document.getElementById('monthSelect').value);
+                            const year = parseInt(document.getElementById('monthYearSelect').value);
+                            const receivedDate = parseDate(row.receivedDate);
+                            
+                            if (receivedDate && receivedDate.getMonth() + 1 === month && receivedDate.getFullYear() === year) {
+                                filteredData.push(row);
+                            }
+                        } else if (viewType === 'year') {
+                            const year = parseInt(document.getElementById('yearSelect').value);
+                            const receivedDate = parseDate(row.receivedDate);
+                            
+                            if (receivedDate && receivedDate.getFullYear() === year) {
+                                filteredData.push(row);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            if (viewType === 'month') {
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const month = monthNames[parseInt(document.getElementById('monthSelect').value) - 1];
+                const year = document.getElementById('monthYearSelect').value;
+                title += ` - ${month} ${year}`;
+            } else if (viewType === 'year') {
+                const year = document.getElementById('yearSelect').value;
+                title += ` - Year ${year}`;
+            } else {
+                title += ' - Total (All Time)';
+            }
+            
+            currentView = filteredData;
+            renderTable(filteredData, title);
+        }
+
+        function applyTATFilter() {
+            const tatStatus = document.getElementById('tatStatus').value;
+            let filteredData = [];
+            let title = '';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            Object.values(allData).forEach(sheetData => {
+                sheetData.rows.forEach(row => {
+                    const tatDate = parseDate(row.tatReport);
+                    const releasedDate = row.reportReleasedDate;
+                    
+                    if (tatStatus === 'completed') {
+                        if (releasedDate && releasedDate.trim()) {
+                            filteredData.push(row);
+                        }
+                    } else if (tatDate && (!releasedDate || !releasedDate.trim())) {
+                        if (tatStatus === 'not_crossed' && tatDate >= today) {
+                            filteredData.push(row);
+                        } else if (tatStatus === 'crossed' && tatDate < today) {
+                            filteredData.push(row);
+                        }
+                    }
+                });
+            });
+            
+            if (tatStatus === 'not_crossed') {
+                title = '⏳ TAT Not Yet Crossed (Pending Reports)';
+            } else if (tatStatus === 'crossed') {
+                title = '🚨 TAT Crossed (Report Not Released)';
+            } else {
+                title = '✅ Reports Released';
+            }
+            
+            currentView = filteredData;
+            renderTable(filteredData, title);
+        }
+    </script>
+</body>
+</html>
